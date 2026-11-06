@@ -196,16 +196,8 @@ Each scenario follows the structured enterprise troubleshooting methodology:
 
 ```powershell
 # Clone the repository
-git clone https://github.com/your-username/NexGuard.git
-cd NexGuard
-
-# Create and activate virtual environment (Windows)
-python -m venv venv
-.\venv\Scripts\Activate.ps1
-
-# (Linux / macOS)
-# python3 -m venv venv
-# source venv/bin/activate
+git clone https://github.com/LOHITHKUMARN/NexGuard-.git
+cd NexGuard-
 ```
 
 ### 2. Configure Environment Variables
@@ -222,6 +214,29 @@ python backend/app.py
 ```
 
 Access the dashboard at: `http://127.0.0.1:5000`
+
+### 4. Run Automated Unit & Integration Tests
+
+```powershell
+python tests/run_tests.py
+```
+
+---
+
+## ✅ Project Completion Checklist (12/12 Completed)
+
+- [x] **Enterprise network topology designed** (5 VLAN campus + Nexus DC architecture)
+- [x] **Five VLANs configured and tested** (VLAN 10, 20, 30, 40, 50)
+- [x] **Cisco IOS configurations tested** (Router-on-a-stick, subinterfaces, 802.1Q, DHCP scopes)
+- [x] **Cisco Nexus (NX-OS) lab completed** (vPC, Port-Channels, LACP, modular features)
+- [x] **Python device monitoring implemented** (Cross-platform ICMP ping with latency & loss calculations)
+- [x] **Device availability and response time recorded** (Relational telemetry logging with timestamp indexing)
+- [x] **Eight troubleshooting scenarios tested** (ITIL-compliant RCA documents with before/after CLI evidence)
+- [x] **Netmiko SSH automation implemented** (Remote execution engine with Cisco command parsing)
+- [x] **Flask dashboard completed** (Overview, Inventory, Live Telemetry, Incidents, and SLA Reports)
+- [x] **SQLite monitoring history implemented** (Device, Incident, and MonitoringLog models)
+- [x] **Incident and alert management implemented** (Automated threshold triggers and resolution workflows)
+- [x] **GitHub repository and documentation completed** (Production-grade README, test suite, and guides)
 
 ---
 

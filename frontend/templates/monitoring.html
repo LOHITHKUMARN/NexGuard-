@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block page_heading %}Live Network Telemetry & Performance{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">
+    <span>Real-Time Latency & Round-Trip Telemetry (ms)</span>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <label style="font-size: 0.8rem; color: var(--text-secondary); display: flex; align-items: center; gap: 6px;">
+        <input type="checkbox" id="autoRefreshCheckbox" checked> Auto-refresh (5s)
+      </label>
+      <button class="btn btn-primary btn-sm" onclick="fetchTelemetryData()">Refresh Now</button>
+    </div>
+  </div>
+  <div style="height: 340px; position: relative;">
+    <canvas id="telemetryChart"></canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="card-title">Device Telemetry Matrix</div>
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Device Name</th>
+          <th>IP Address</th>
+          <th>Current Status</th>
+          <th>RTT Latency</th>
+          <th>Packet Loss</th>
+          <th>Packet Status Indicator</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="telemetryTableBody">
+        <tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Streaming telemetry...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/monitoring.js') }}"></script>
+{% endblock %}

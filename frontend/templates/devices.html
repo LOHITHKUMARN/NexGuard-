@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block page_heading %}Device Inventory & Switch Management{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="card-title">
+    <span>Monitored Enterprise Infrastructure</span>
+    <button class="btn btn-primary" onclick="openAddDeviceModal()">
+      <span>➕</span> Add Network Device
+    </button>
+  </div>
+
+  <!-- Filters Bar -->
+  <div class="filters-bar">
+    <div style="flex: 1; min-width: 200px;">
+      <input type="text" id="deviceSearchInput" class="form-control" placeholder="Search by name, IP or location..." onkeyup="filterDeviceTable()">
+    </div>
+    <div>
+      <select id="vlanFilterSelect" class="form-control" onchange="filterDeviceTable()">
+        <option value="">All Departments & VLANs</option>
+        <option value="10">VLAN 10 – Human Resources</option>
+        <option value="20">VLAN 20 – Finance</option>
+        <option value="30">VLAN 30 – IT Operations</option>
+        <option value="40">VLAN 40 – Customer Support</option>
+        <option value="50">VLAN 50 – Data Center & Servers</option>
+        <option value="infra">Infrastructure (Core / Distribution)</option>
+      </select>
+    </div>
+    <div>
+      <select id="statusFilterSelect" class="form-control" onchange="filterDeviceTable()">
+        <option value="">All Statuses</option>
+        <option value="ONLINE">Online Only</option>
+        <option value="OFFLINE">Offline Only</option>
+        <option value="DEGRADED">Degraded Only</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Devices Table -->
+  <div class="table-responsive">
+    <table>
+      <thead>
+        <tr>
+          <th>Device Name</th>
+          <th>IP Address</th>
+          <th>Type</th>
+          <th>Platform / Vendor</th>
+          <th>Location</th>
+          <th>VLAN</th>
+          <th>Status</th>
+          <th>RTT Latency</th>
+          <th>Packet Loss</th>
+          <th>Last Checked</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="deviceTableBody">
+        <tr><td colspan="11" style="text-align: center; color: var(--text-muted);">Loading devices...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Device Modal -->
+<div id="addDeviceModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Add New Network Device</h3>
+      <button class="modal-close" onclick="closeAddDeviceModal()">&times;</button>
+    </div>
+    <form id="addDeviceForm" onsubmit="submitNewDevice(event)">
+      <div class="form-group">
+        <label class="form-label">Hostname / Device Name</label>
+        <input type="text" id="newDevName" class="form-control" required placeholder="e.g. HR-Printer-02">
+      </div>
+      <div class="form-group">
+        <label class="form-label">IP Address</label>
+        <input type="text" id="newDevIp" class="form-control" required placeholder="e.g. 192.168.10.25">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Device Type</label>
+        <select id="newDevType" class="form-control">
+          <option value="Switch">Switch (Cisco Catalyst)</option>
+          <option value="Nexus">Nexus (Cisco NX-OS)</option>
+          <option value="Router">Router (Cisco ISR)</option>
+          <option value="Server">Server / Blade</option>
+          <option value="Workstation">Workstation / Host</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hardware / Vendor</label>
+        <input type="text" id="newDevVendor" class="form-control" value="Cisco Catalyst 2960" placeholder="e.g. Cisco Catalyst 2960">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Location / Rack</label>
+        <input type="text" id="newDevLocation" class="form-control" value="Floor 2 - IDF 1" placeholder="e.g. Server Rack B2">
+      </div>
+      <div class="form-group">
+        <label class="form-label">VLAN Assignment</label>
+        <input type="number" id="newDevVlan" class="form-control" placeholder="10, 20, 30, 40, or 50">
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px;">
+        <button type="button" class="btn btn-secondary" onclick="closeAddDeviceModal()">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save & Register</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/devices.js') }}"></script>
+{% endblock %}

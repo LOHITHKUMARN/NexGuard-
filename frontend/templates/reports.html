@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block page_heading %}Enterprise Network SLA & Performance Reports{% endblock %}
+
+{% block content %}
+<div class="stats-grid">
+  <div class="stat-card" style="border-left: 4px solid var(--accent-green);">
+    <div class="stat-header">Network SLA Availability</div>
+    <div class="stat-value" id="reportSla" style="color: var(--accent-green);">--%</div>
+    <div class="stat-subtext">Enterprise Target: 99.90%</div>
+  </div>
+
+  <div class="stat-card" style="border-left: 4px solid var(--accent-cisco);">
+    <div class="stat-header">Mean Time To Repair (MTTR)</div>
+    <div class="stat-value" id="reportMttr" style="color: var(--accent-cisco);">-- mins</div>
+    <div class="stat-subtext">Average resolution time</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">Total Incidents Logged</div>
+    <div class="stat-value" id="reportTotalInc">--</div>
+    <div class="stat-subtext">All historical anomalies</div>
+  </div>
+
+  <div class="stat-card" style="border-left: 4px solid var(--accent-purple);">
+    <div class="stat-header">Resolution Rate</div>
+    <div class="stat-value" id="reportResRate" style="color: var(--accent-purple);">--%</div>
+    <div class="stat-subtext">Tickets closed successfully</div>
+  </div>
+</div>
+
+<div class="dashboard-row">
+  <!-- VLAN SLA Breakdown -->
+  <div class="card">
+    <div class="card-title">Department & VLAN Availability Matrix</div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Network Segment</th>
+            <th>Total Devices</th>
+            <th>Online</th>
+            <th>Offline</th>
+            <th>Availability Index</th>
+          </tr>
+        </thead>
+        <tbody id="vlanReportTable">
+          <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading segment data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Top Failing Devices -->
+  <div class="card">
+    <div class="card-title">Top Incident Sources</div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Device Name</th>
+            <th>Incident Count</th>
+            <th>Health Risk</th>
+          </tr>
+        </thead>
+        <tbody id="topFailuresTable">
+          <tr><td colspan="3" style="text-align: center; color: var(--text-muted);">Loading failure analysis...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;">
+  <div>
+    <h3 style="font-size: 1.1rem; margin-bottom: 4px;">Compliance & Audit Export</h3>
+    <p style="font-size: 0.85rem; color: var(--text-secondary);">Download verifiable telemetry and incident logs for SLA compliance.</p>
+  </div>
+  <div style="display: flex; gap: 10px;">
+    <button class="btn btn-secondary" onclick="exportData('json')">
+      <span>💾</span> Export Audit JSON
+    </button>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  let cachedReportData = null;
+
+  async function loadReportsData() {
+    try {
+      const res = await fetch("/api/reports/summary");
+      const data = await res.json();
+      cachedReportData = data;
+
+      document.getElementById("reportSla").textContent = `${data.overall_sla_uptime_pct}%`;
+      document.getElementById("reportMttr").textContent = `${data.mean_time_to_repair_minutes}m`;
+      document.getElementById("reportTotalInc").textContent = data.total_incidents;
+      
+      const resRate = data.total_incidents > 0 
+        ? Math.round((data.resolved_incidents / data.total_incidents) * 100) 
+        : 100;
+      document.getElementById("reportResRate").textContent = `${resRate}%`;
+
+      // VLAN table
+      const vlanTbody = document.getElementById("vlanReportTable");
+      const entries = Object.entries(data.vlan_breakdown || {});
+      if (entries.length === 0) {
+        vlanTbody.innerHTML = `<tr><td colspan="5" style="text-align: center;">No VLAN data available.</td></tr>`;
+      } else {
+        vlanTbody.innerHTML = entries.map(([vlanName, stats]) => {
+          const availPct = stats.total > 0 ? Math.round((stats.online / stats.total) * 100) : 100;
+          return `
+            <tr>
+              <td><strong>${vlanName}</strong></td>
+              <td>${stats.total}</td>
+              <td style="color: var(--accent-green);">${stats.online}</td>
+              <td style="color: ${stats.offline > 0 ? 'var(--accent-red)' : 'var(--text-muted)'};">${stats.offline}</td>
+              <td>
+                <span class="badge badge-${availPct >= 95 ? 'online' : (availPct >= 70 ? 'degraded' : 'offline')}">
+                  ${availPct}%
+                </span>
+              </td>
+            </tr>
+          `;
+        }).join("");
+      }
+
+      // Top failures table
+      const failTbody = document.getElementById("topFailuresTable");
+      if (!data.top_failing_devices || data.top_failing_devices.length === 0) {
+        failTbody.innerHTML = `<tr><td colspan="3" style="text-align: center; color: var(--text-muted);">No recurring failure patterns detected.</td></tr>`;
+      } else {
+        failTbody.innerHTML = data.top_failing_devices.map(d => `
+          <tr>
+            <td><strong>${d.name}</strong></td>
+            <td>${d.incidents}</td>
+            <td><span class="badge badge-${d.incidents >= 2 ? 'critical' : 'warning'}">Elevated</span></td>
+          </tr>
+        `).join("");
+      }
+
+    } catch (e) {
+      console.error("Failed to load reports:", e);
+    }
+  }
+
+  function exportData(type) {
+    if (!cachedReportData) return;
+    const blob = new Blob([JSON.stringify(cachedReportData, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `nexguard-sla-report-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  document.addEventListener("DOMContentLoaded", loadReportsData);
+</script>
+{% endblock %}

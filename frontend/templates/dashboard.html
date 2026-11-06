@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block page_heading %}Enterprise Operations Dashboard{% endblock %}
+
+{% block content %}
+<!-- KPI Cards -->
+<div class="stats-grid">
+  <div class="stat-card">
+    <div class="stat-header">Total Monitored</div>
+    <div class="stat-value" id="kpiTotal">--</div>
+    <div class="stat-subtext">Cisco Routers, Switches, Nexus & Hosts</div>
+  </div>
+
+  <div class="stat-card" style="border-left: 4px solid var(--accent-green);">
+    <div class="stat-header">Online Devices</div>
+    <div class="stat-value" style="color: var(--accent-green);" id="kpiOnline">--</div>
+    <div class="stat-subtext">Normal operational status</div>
+  </div>
+
+  <div class="stat-card" style="border-left: 4px solid var(--accent-red);">
+    <div class="stat-header">Offline Devices</div>
+    <div class="stat-value" style="color: var(--accent-red);" id="kpiOffline">--</div>
+    <div class="stat-subtext">Immediate triage required</div>
+  </div>
+
+  <div class="stat-card" style="border-left: 4px solid var(--accent-amber);">
+    <div class="stat-header">Active Incidents</div>
+    <div class="stat-value" style="color: var(--accent-amber);" id="kpiIncidents">--</div>
+    <div class="stat-subtext">Open & Acknowledged tickets</div>
+  </div>
+
+  <div class="stat-card">
+    <div class="stat-header">Avg Round-Trip Time</div>
+    <div class="stat-value" id="kpiAvgLatency">-- ms</div>
+    <div class="stat-subtext">ICMP campus backbone latency</div>
+  </div>
+
+  <div class="stat-card" style="border-left: 4px solid var(--accent-cisco);">
+    <div class="stat-header">SLA Network Health</div>
+    <div class="stat-value" style="color: var(--accent-cisco);" id="kpiHealth">--%</div>
+    <div class="stat-subtext">Department uptime index</div>
+  </div>
+</div>
+
+<!-- Charts Section -->
+<div class="dashboard-row">
+  <div class="card">
+    <div class="card-title">
+      <span>Enterprise Subnet & VLAN Health</span>
+      <span style="font-size: 0.8rem; color: var(--text-muted);">VLAN 10, 20, 30, 40, 50</span>
+    </div>
+    <div style="height: 280px; position: relative;">
+      <canvas id="vlanBarChart"></canvas>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Device Status Distribution</div>
+    <div style="height: 280px; position: relative; display: flex; align-items: center; justify-content: center;">
+      <canvas id="statusDoughnutChart"></canvas>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Section: Recent Incidents & Subnet Scanner -->
+<div class="dashboard-row" style="grid-template-columns: 1.5fr 1fr;">
+  <!-- Recent Incidents -->
+  <div class="card">
+    <div class="card-title">
+      <span>Recent Critical Network Incidents</span>
+      <a href="/incidents" class="btn btn-secondary btn-sm">View All Incidents</a>
+    </div>
+    <div class="table-responsive">
+      <table>
+        <thead>
+          <tr>
+            <th>Severity</th>
+            <th>Device</th>
+            <th>Title</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="recentIncidentsTable">
+          <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading incidents...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick Subnet Sweep Tool -->
+  <div class="card">
+    <div class="card-title">Subnet Discovery Scanner</div>
+    <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 12px;">
+      Perform automated ICMP ping sweeps across targeted departmental subnets.
+    </p>
+    <div class="form-group">
+      <label class="form-label">Target CIDR Subnet</label>
+      <input type="text" id="scanCidrInput" class="form-control" value="192.168.10.0/28" placeholder="e.g. 192.168.10.0/28">
+    </div>
+    <button class="btn btn-primary" style="width: 100%; margin-bottom: 16px;" onclick="runSubnetScan()">
+      <span>🔍</span> Run Subnet Sweep
+    </button>
+    <div id="scanResultOutput" class="terminal-window" style="max-height: 180px; font-size: 0.78rem;">
+      Ready to scan. Select a subnet above.
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

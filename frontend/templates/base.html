@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NexGuard – Enterprise Network Monitoring{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <!-- Chart.js CDN for live telemetry -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Sidebar Navigation -->
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">NG</div>
+      <div>
+        <div class="brand-title">NexGuard</div>
+        <div class="brand-subtitle">NOC Operations & Diagnostics</div>
+      </div>
+    </div>
+
+    <ul class="nav-menu">
+      <li class="nav-item {% if active_page == 'dashboard' %}active{% endif %}">
+        <a href="/">
+          <span>📊</span> Overview Dashboard
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'devices' %}active{% endif %}">
+        <a href="/devices">
+          <span>🖥️</span> Device Inventory
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'monitoring' %}active{% endif %}">
+        <a href="/monitoring">
+          <span>📈</span> Live Telemetry
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'incidents' %}active{% endif %}">
+        <a href="/incidents">
+          <span>🚨</span> Incidents & RCA
+        </a>
+      </li>
+      <li class="nav-item {% if active_page == 'reports' %}active{% endif %}">
+        <a href="/reports">
+          <span>📑</span> SLA & Uptime Reports
+        </a>
+      </li>
+    </ul>
+
+    <div class="sidebar-footer">
+      <div>Enterprise Lab Simulation</div>
+      <div style="margin-top: 4px; color: var(--accent-cisco);">Cisco IOS & NX-OS</div>
+    </div>
+  </aside>
+
+  <!-- Main Workspace -->
+  <div class="main-wrapper">
+    <header class="topbar">
+      <div class="page-title">{% block page_heading %}Network Operations Center{% endblock %}</div>
+      <div class="topbar-actions">
+        <button id="globalPollBtn" class="btn btn-secondary btn-sm" onclick="triggerGlobalPoll()">
+          <span>🔄</span> Poll Network Now
+        </button>
+        <div id="liveClock" style="font-size: 0.85rem; color: var(--text-secondary); font-family: monospace;"></div>
+      </div>
+    </header>
+
+    <main class="content-container">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Global SSH Diagnostics Modal -->
+  <div id="sshModal" class="modal-overlay">
+    <div class="modal-content" style="max-width: 750px;">
+      <div class="modal-header">
+        <h3 id="sshModalTitle">Cisco CLI Diagnostics</h3>
+        <button class="modal-close" onclick="closeSshModal()">&times;</button>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <div style="display: flex; gap: 8px; margin-bottom: 12px;">
+          <input type="text" id="sshCommandInput" class="form-control" placeholder="Enter command e.g. show ip interface brief">
+          <button class="btn btn-primary" onclick="executeSshCommand()">Execute</button>
+        </div>
+        <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show ip interface brief')">show ip int brief</button>
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show vlan brief')">show vlan brief</button>
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show interfaces trunk')">show int trunk</button>
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show ip route')">show ip route</button>
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show port-channel summary')">show port-channel</button>
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show vpc')">show vpc</button>
+          <button class="btn btn-secondary btn-sm" onclick="setSshCommand('show version')">show version</button>
+        </div>
+      </div>
+      <div id="sshOutputWindow" class="terminal-window">Awaiting command execution...</div>
+    </div>
+  </div>
+
+  <script>
+    // Live clock update
+    function updateClock() {
+      const now = new Date();
+      const clockEl = document.getElementById("liveClock");
+      if (clockEl) {
+        clockEl.textContent = now.toLocaleTimeString() + " UTC";
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // Trigger global network poll
+    async function triggerGlobalPoll() {
+      const btn = document.getElementById("globalPollBtn");
+      if (btn) btn.innerHTML = "<span>⏳</span> Polling...";
+      try {
+        const res = await fetch("/api/monitoring/poll-now", { method: "POST" });
+        if (res.ok) {
+          if (typeof reloadPageData === "function") {
+            reloadPageData();
+          } else {
+            window.location.reload();
+          }
+        }
+      } catch (e) {
+        console.error("Poll failed:", e);
+      } finally {
+        if (btn) btn.innerHTML = "<span>🔄</span> Poll Network Now";
+      }
+    }
+
+    let activeSshDeviceId = null;
+    function openSshModal(deviceId, deviceName, ip) {
+      activeSshDeviceId = deviceId;
+      document.getElementById("sshModalTitle").textContent = `Cisco Diagnostics – ${deviceName} (${ip})`;
+      document.getElementById("sshOutputWindow").textContent = `Connected to session for ${deviceName} [${ip}]. Select or type a Cisco command above.`;
+      document.getElementById("sshModal").style.display = "flex";
+    }
+
+    function closeSshModal() {
+      document.getElementById("sshModal").style.display = "none";
+      activeSshDeviceId = null;
+    }
+
+    function setSshCommand(cmd) {
+      document.getElementById("sshCommandInput").value = cmd;
+      executeSshCommand();
+    }
+
+    async function executeSshCommand() {
+      if (!activeSshDeviceId) return;
+      const cmd = document.getElementById("sshCommandInput").value.trim();
+      if (!cmd) return;
+
+      const outputWin = document.getElementById("sshOutputWindow");
+      outputWin.textContent = `Executing '${cmd}' via Netmiko on device...`;
+
+      try {
+        const res = await fetch(`/api/devices/${activeSshDeviceId}/ssh`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ command: cmd })
+        });
+        const data = await res.json();
+        let resultText = "";
+        if (data.note) {
+          resultText += `[Notice: ${data.note}]\n\n`;
+        }
+        resultText += data.output || "No output returned.";
+        outputWin.textContent = resultText;
+      } catch (err) {
+        outputWin.textContent = `Error executing command: ${err.message}`;
+      }
+    }
+  </script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>
